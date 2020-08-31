@@ -1,0 +1,13 @@
+{
+  "manifest_version": 2,
+  "name": "GithubTimelineFilter",
+  "version": "0.1.0",
+  "description": "GithubTimelineFilter allows to filter items in ",
+
+  "content_scripts": [{
+    "css": ["userstylesheet.css"],
+    "js": ["userscript.js"],
+    "matches": ["https://github.com/peckadesign/*/issues/*"]
+  }],
+  "permissions": ["https://github.com/", "storage"]
+}

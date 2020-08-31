@@ -1,0 +1,22 @@
+.gtf {
+    position:fixed;
+    bottom:10px;
+    left:10px;
+    padding:10px;
+    border:1px solid #e1e4e8;
+    border-radius:6px;
+    background:#f6f8fa;
+}
+
+.gtf__item {
+    display:flex;
+    align-items:center;
+}
+
+.gtf__checkbox {
+    margin:0 10px 0 0;
+}
+
+.gtf-hidden {
+    display:none !important;
+}
