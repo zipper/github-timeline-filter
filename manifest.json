@@ -1,13 +1,21 @@
 {
   "manifest_version": 2,
   "name": "GithubTimelineFilter",
-  "version": "0.1.0",
-  "description": "GithubTimelineFilter allows to filter items in ",
-
+  "version": "0.1.2",
+  "description": "GithubTimelineFilter allows to filter items in issue detail.",
   "content_scripts": [{
     "css": ["userstylesheet.css"],
     "js": ["userscript.js"],
     "matches": ["https://github.com/peckadesign/*/issues/*"]
   }],
-  "permissions": ["https://github.com/", "storage"]
+  "permissions": [
+    "https://github.com/",
+    "storage"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{a47a79a2-7d35-47d0-8c7b-c3737ea21c1e}",
+      "strict_min_version": "79.0"
+    }
+  }
 }

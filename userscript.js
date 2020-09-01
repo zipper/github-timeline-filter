@@ -1,6 +1,6 @@
 (function (window) {
 
-	let labels = {
+	const labels = {
 		comments: 'Comments',
 		commits: 'Commits',
 		pulls: 'Cross reference in pull request',
@@ -24,22 +24,21 @@
 		others: true
 	};
 
-	let storage = chrome.storage.sync;
+	const extStorage = (typeof browser !== 'undefined') ? browser.storage.sync : chrome.storage.sync;
 
 	function initExtension() {
-		storage.get(['gtfShow'], result => {
+		extStorage.get(['gtfShow'], result => {
 			if (result.gtfShow) {
 				Object.assign(show, result.gtfShow);
 			}
 
 			/* Take care of AJAX pagination */
 			const targetNode = document.querySelector('.js-issue-timeline-container');
-			const config = { attributes: false, childList: true, subtree: true };
-			const observer = new MutationObserver(function (mutationsList) {
+			const observer = new MutationObserver(mutationsList => {
 				updateTimelineItems();
 				filterTimeline();
 			});
-			observer.observe(targetNode, config);
+			observer.observe(targetNode, { childList: true, subtree: true });
 
 			/* Initialize */
 			createFilter();
@@ -48,11 +47,10 @@
 		});
 	}
 
-
 	function toggleCheckbox() {
 		show[this.dataset.type] = this.checked;
 
-		storage.set({ 'gtfShow': show });
+		extStorage.set({ 'gtfShow': show });
 
 		filterTimeline();
 	}
@@ -131,7 +129,6 @@
 			}
 		}
 	}
-
 
 
 	if (document.readyState === 'loading') {
