@@ -2,7 +2,12 @@
 
 ### Installation
 
-1. Clone the repository
+#### Chrome
+1. Clone / download the repository
 2. Go to the extensions: `chrome://extensions/`
 3. Enable developer mode (in the top right corner)
 4. Select cloned folder by using `LOAD UNPACKED`
+
+#### FireFox
+1. Clone / download the repository
+2. Open the xpi file using FireFox
