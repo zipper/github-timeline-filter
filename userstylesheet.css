@@ -2,6 +2,7 @@
     position:fixed;
     bottom:10px;
     left:10px;
+    z-index:1;
     padding:10px;
     border:1px solid #e1e4e8;
     border-radius:6px;
