@@ -33,11 +33,16 @@
 			}
 
 			/* Take care of AJAX pagination */
-			const targetNode = document.querySelector('.js-issue-timeline-container');
+			const targetNode = document.querySelector('.js-discussion');
 			const observer = new MutationObserver(mutationsList => {
 				updateTimelineItems();
 				filterTimeline();
 			});
+
+			if (! targetNode) {
+				return false;
+			}
+
 			observer.observe(targetNode, { childList: true, subtree: true });
 
 			/* Initialize */
