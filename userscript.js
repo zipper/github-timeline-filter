@@ -5,6 +5,7 @@
 		commits: 'Commits',
 		pulls: 'Cross reference in pull request',
 		issues: 'Cross reference in issues',
+		deployments: 'Deployments',
 		others: 'Other (labels, assignment, projects, …)'
 	};
 
@@ -13,6 +14,7 @@
 		commits: null,
 		pulls: null,
 		issues: null,
+		deployments: null,
 		others: null
 	};
 
@@ -21,6 +23,7 @@
 		commits: true,
 		pulls: true,
 		issues: true,
+		deployments: true,
 		others: true
 	};
 
@@ -90,6 +93,7 @@
 	}
 
 	function updateTimelineItems() {
+		// debugger;
 		let timelineItems = document.querySelectorAll('.TimelineItem');
 		timelineItems = Array.from(timelineItems);
 
@@ -98,7 +102,8 @@
 		});
 
 		items.commits = timelineItems.filter(item => {
-			return item.querySelector('.TimelineItem-body[id^="ref-commit-"]');
+			return item.querySelector('.TimelineItem-body[id^="ref-commit-"]') || // commits in issue detail
+				item.classList.contains('js-commit'); // commits in PR
 		});
 
 		items.pulls = timelineItems.filter(item => {
@@ -108,14 +113,21 @@
 		});
 
 		items.issues = timelineItems.filter(item => {
-			return item.querySelector('[data-hovercard-type="issue"]') &&
+			return items.commits.indexOf(item) === -1 &&
+				item.querySelector('[data-hovercard-type="issue"]') &&
 				! item.classList.contains('js-comment-container') &&
 				! item.querySelector('.TimelineItem-body[id^="ref-commit-"]');
 		});
 
+		items.deployments = timelineItems.filter(item => {
+			return item.matches('[id^="event-"]') &&
+				item.parentNode.matches('[data-url*="/events/deployed"]');
+		})
+
 		items.others = timelineItems.filter(item => {
 			return items.comments.indexOf(item) === -1 && items.commits.indexOf(item) === -1 &&
-				items.pulls.indexOf(item) === -1 && items.issues.indexOf(item) === -1;
+				items.pulls.indexOf(item) === -1 && items.issues.indexOf(item) === -1 &&
+				items.deployments.indexOf(item) === -1;
 		});
 	}
 
