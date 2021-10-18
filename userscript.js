@@ -5,6 +5,7 @@
 		commits: 'Commits',
 		pulls: 'Cross reference in pull request',
 		issues: 'Cross reference in issues',
+		deployments: 'Deployments',
 		others: 'Other (labels, assignment, projects, …)'
 	};
 
@@ -13,6 +14,7 @@
 		commits: null,
 		pulls: null,
 		issues: null,
+		deployments: null,
 		others: null
 	};
 
@@ -21,6 +23,7 @@
 		commits: true,
 		pulls: true,
 		issues: true,
+		deployments: true,
 		others: true
 	};
 
@@ -44,6 +47,12 @@
 			}
 
 			observer.observe(targetNode, { childList: true, subtree: true });
+
+			/* Handle AJAX page load */
+			document.documentElement.addEventListener('pjax:complete', (e) => {
+				updateTimelineItems();
+				filterTimeline();
+			});
 
 			/* Initialize */
 			createFilter();
@@ -94,29 +103,37 @@
 		timelineItems = Array.from(timelineItems);
 
 		items.comments = timelineItems.filter(item => {
-			return item.classList.contains('js-comment-container');
+			return item.classList.contains('js-comment-container') || // generic comments
+				item.closest('.js-comment') || // review comments
+				item.querySelector('.js-comment-container');
 		});
+		timelineItems = timelineItems.filter(item => !items.comments.includes(item));
 
 		items.commits = timelineItems.filter(item => {
-			return item.querySelector('.TimelineItem-body[id^="ref-commit-"]');
+			return item.querySelector('.TimelineItem-body[id^="ref-commit-"]') || // commits in issue detail
+				item.classList.contains('js-commit-group-header') || // commits in PR
+				item.classList.contains('js-commit') ||
+				item.closest('.js-commit-group-commits');
 		});
+		timelineItems = timelineItems.filter(item => !items.commits.includes(item));
 
 		items.pulls = timelineItems.filter(item => {
-			return item.querySelector('[data-hovercard-type="pull_request"]') &&
-				! item.classList.contains('js-comment-container') &&
-				! item.querySelector('.TimelineItem-body[id^="ref-commit-"]');
+			return item.querySelector('[data-hovercard-type="pull_request"]');
 		});
+		timelineItems = timelineItems.filter(item => !items.pulls.includes(item));
 
 		items.issues = timelineItems.filter(item => {
-			return item.querySelector('[data-hovercard-type="issue"]') &&
-				! item.classList.contains('js-comment-container') &&
-				! item.querySelector('.TimelineItem-body[id^="ref-commit-"]');
+			return item.querySelector('[data-hovercard-type="issue"]');
 		});
+		timelineItems = timelineItems.filter(item => !items.issues.includes(item));
 
-		items.others = timelineItems.filter(item => {
-			return items.comments.indexOf(item) === -1 && items.commits.indexOf(item) === -1 &&
-				items.pulls.indexOf(item) === -1 && items.issues.indexOf(item) === -1;
+		items.deployments = timelineItems.filter(item => {
+			return item.matches('[id^="event-"]') &&
+				item.parentNode.matches('[data-url*="/events/deployed"]');
 		});
+		timelineItems = timelineItems.filter(item => !items.deployments.includes(item));
+
+		items.others = timelineItems;
 	}
 
 	function filterTimeline() {
