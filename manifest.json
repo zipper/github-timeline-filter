@@ -1,14 +1,14 @@
 {
   "manifest_version": 2,
   "name": "GithubTimelineFilter",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "GithubTimelineFilter allows to filter items in issue detail and PRs.",
   "content_scripts": [{
     "css": ["userstylesheet.css"],
     "js": ["userscript.js"],
     "matches": [
-		"https://github.com/peckadesign/*/issues/*",
-		"https://github.com/peckadesign/*/pull/*"
+		"https://github.com/*/*/issues/*",
+		"https://github.com/*/*/pull/*"
 	]
   }],
   "permissions": [
