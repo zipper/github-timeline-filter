@@ -1,24 +1,25 @@
 {
-  "manifest_version": 2,
-  "name": "GithubTimelineFilter",
-  "version": "0.2.2",
-  "description": "GithubTimelineFilter allows to filter items in issue detail and PRs.",
-  "content_scripts": [{
-    "css": ["userstylesheet.css"],
-    "js": ["userscript.js"],
-    "matches": [
-		"https://github.com/*/*/issues/*",
-		"https://github.com/*/*/pull/*"
-	]
-  }],
-  "permissions": [
-    "https://github.com/",
-    "storage"
-  ],
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "{a47a79a2-7d35-47d0-8c7b-c3737ea21c1e}",
-      "strict_min_version": "79.0"
-    }
-  }
+	"manifest_version": 3,
+	"name": "GithubTimelineFilter",
+	"version": "0.3.0",
+	"description": "GithubTimelineFilter allows to filter items in issue detail and PRs.",
+	"content_scripts": [{
+		"css": ["userstylesheet.css"],
+		"js": ["userscript.js"],
+		"matches": [
+			"https://github.com/*"
+		]
+	}],
+	"permissions": [
+		"storage"
+	],
+	"host_permissions": [
+		"https://github.com/"
+	],
+	"browser_specific_settings": {
+		"gecko": {
+			"id": "{a47a79a2-7d35-47d0-8c7b-c3737ea21c1f}",
+			"strict_min_version": "109.0"
+		}
+	}
 }

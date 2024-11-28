@@ -1,84 +1,134 @@
 (function (window) {
 
-	const labels = {
-		comments: 'Comments',
-		commits: 'Commits',
-		pulls: 'Cross reference in pull request',
-		issues: 'Cross reference in issues',
-		deployments: 'Deployments',
-		others: 'Other (labels, assignment, projects, …)'
-	};
+	class GithubTimelineFilter {
+		#labels = {
+			comments: 'Comments',
+			commits: 'Commits',
+			pulls: 'Cross reference in pull request',
+			issues: 'Cross reference in issues',
+			reviews: 'Reviews',
+			others: 'Other (labels, assignment, projects, …)'
+		}
 
-	let items = {
-		comments: null,
-		commits: null,
-		pulls: null,
-		issues: null,
-		deployments: null,
-		others: null
-	};
+		#items = {
+			comments: [],
+			commits: [],
+			pulls: [],
+			issues: [],
+			reviews: [],
+			others: [],
+		}
 
-	let show = {
-		comments: true,
-		commits: true,
-		pulls: true,
-		issues: true,
-		deployments: true,
-		others: true
-	};
+		#visibility = {
+			comments: true,
+			commits: true,
+			pulls: true,
+			issues: true,
+			reviews: true,
+			others: true,
+		};
 
-	const extStorage = (typeof browser !== 'undefined') ? browser.storage.sync : chrome.storage.sync;
+		#element = null
+		#labelElements = []
 
-	function initExtension() {
-		extStorage.get(['gtfShow'], result => {
-			if (result.gtfShow) {
-				Object.assign(show, result.gtfShow);
+		#storage = (typeof browser !== 'undefined') ? browser.storage.sync : chrome.storage.sync;
+
+		#timer = null
+
+		#elementLegacySelector = '.js-discussion'
+		#elementSelector = `[data-testid="issue-viewer-container"], ${this.#elementLegacySelector}`;
+
+		#legacyMode = false;
+
+		#activeObservers = new Map();
+
+		constructor() {
+			this.#storage.get(['gtfShow'], (result) => this.#initialize(result.gtfShow))
+		}
+
+		#initialize(defaultVisibility) {
+			if (defaultVisibility) {
+				Object.assign(this.#visibility, defaultVisibility)
 			}
 
-			/* Take care of AJAX pagination */
-			const targetNode = document.querySelector('.js-discussion');
-			const observer = new MutationObserver(mutationsList => {
-				updateTimelineItems();
-				filterTimeline();
+			this.#createFilterElement()
+
+			const observer = new MutationObserver(this.#bodyObserverCallback.bind(this));
+
+			observer.observe(document.body, {
+				childList: true,
+				subtree: true
 			});
 
-			if (! targetNode) {
-				return false;
+			const element = document.querySelector(this.#elementSelector)
+
+			if (element) {
+				this.#initializeFilter(element)
 			}
+		}
 
-			observer.observe(targetNode, { childList: true, subtree: true });
+		#bodyObserverCallback(mutationsList) {
+			for (const mutation of mutationsList) {
+				// Check removed nodes for cleanup
+				mutation.removedNodes.forEach((node) => {
+					if (node.nodeType === 1 && node.matches(this.#elementSelector)) {
+						this.#destroyFilter(node);
+					} else if (node.nodeType === 1) {
+						const descendants = node.querySelectorAll(this.#elementSelector);
+						descendants.forEach((descendant) => {
+							this.#destroyFilter(descendant);
+						});
+					}
+				});
 
-			/* Handle AJAX page load */
-			document.documentElement.addEventListener('pjax:complete', (e) => {
-				updateTimelineItems();
-				filterTimeline();
+				// Check added nodes for direct or descendant matches
+				mutation.addedNodes.forEach((node) => {
+					if (node.nodeType === 1 && node.matches(this.#elementSelector)) {
+						this.#initializeFilter(node);
+					} else if (node.nodeType === 1) {
+						const descendants = node.querySelectorAll(this.#elementSelector);
+						descendants.forEach((descendant) => {
+							this.#initializeFilter(descendant);
+						});
+					}
+				});
+			}
+		}
+
+		#initializeFilter(element) {
+			this.#legacyMode = element.matches(this.#elementLegacySelector)
+
+			const observer = new MutationObserver(() => {
+				this.#legacyMode ? this.#updateLegacyTimelineItems() : this.#updateTimelineItems();
+				this.#updateItemsCount();
+				this.#filterTimeline();
 			});
 
-			/* Initialize */
-			createFilter();
-			updateTimelineItems();
-			filterTimeline();
-		});
-	}
+			observer.observe(element, { childList: true, subtree: true });
 
-	function toggleCheckbox() {
-		show[this.dataset.type] = this.checked;
+			this.#legacyMode ? this.#updateLegacyTimelineItems() : this.#updateTimelineItems();
+			this.#updateItemsCount();
+			this.#filterTimeline();
+		}
 
-		extStorage.set({ 'gtfShow': show });
+		#destroyFilter(element) {
+			if (this.#activeObservers.has(element)) {
+				this.#activeObservers.get(element).disconnect();
+				this.#activeObservers.delete(element);
+			}
+		}
 
-		filterTimeline();
-	}
+		#createFilterElement() {
+			const element = document.createElement('div');
+			element.classList.add('gtf', 'gtf--hidden');
 
-	function createFilter() {
-		let div = document.createElement('div');
-		div.classList.add('gtf');
-
-		for (type in show) {
-			if (show.hasOwnProperty(type)) {
+			for (let type in this.#visibility) {
 				let label = document.createElement('label');
 				label.setAttribute('for', 'gtf-' + type);
 				label.innerText = type[0].toUpperCase() + type.slice(1);
-				label.title = labels[type];
+				label.title = this.#labels[type];
+				label.dataset.type = type;
+				label.dataset.count = 0;
 				label.classList.add('gtf__item');
 
 				let checkbox = document.createElement('input');
@@ -87,79 +137,148 @@
 				checkbox.name = 'gtf';
 				checkbox.classList.add('gtf__checkbox');
 				checkbox.dataset.type = type;
-				checkbox.checked = show[type];
-				checkbox.addEventListener('change', toggleCheckbox);
+				checkbox.checked = this.#visibility[type];
+				checkbox.addEventListener('change', () => this.#toggleItemVisibility(checkbox));
 
 				label.prepend(checkbox);
-				div.append(label);
+				element.append(label);
+
+				this.#labelElements.push(label);
 			}
+
+			this.#element = element;
+			document.body.append(element);
 		}
 
-		document.body.append(div);
-	}
+		// This is used on issues
+		#updateTimelineItems() {
+			let timelineItems = Array.from(document.querySelectorAll('[data-timeline-event-id]'));
 
-	function updateTimelineItems() {
-		let timelineItems = document.querySelectorAll('.TimelineItem');
-		timelineItems = Array.from(timelineItems);
+			this.#items.comments = this.#getItemsByEventIdPrefix(timelineItems, 'IC_')
+			timelineItems = timelineItems.filter((item) => ! this.#items.comments.includes(item));
 
-		items.comments = timelineItems.filter(item => {
-			return item.classList.contains('js-comment-container') || // generic comments
-				item.closest('.js-comment') || // review comments
-				item.querySelector('.js-comment-container');
-		});
-		timelineItems = timelineItems.filter(item => !items.comments.includes(item));
+			this.#items.commits = this.#getItemsByEventIdPrefix(timelineItems, 'REFE_')
+			timelineItems = timelineItems.filter((item) => ! this.#items.commits.includes(item));
 
-		items.commits = timelineItems.filter(item => {
-			return item.querySelector('.TimelineItem-body[id^="ref-commit-"]') || // commits in issue detail
-				item.classList.contains('js-commit-group-header') || // commits in PR
-				item.classList.contains('js-commit') ||
-				item.closest('.js-commit-group-commits');
-		});
-		timelineItems = timelineItems.filter(item => !items.commits.includes(item));
+			this.#items.pulls = this.#getPulls(timelineItems)
+			timelineItems = timelineItems.filter((item) => ! this.#items.pulls.includes(item));
 
-		items.pulls = timelineItems.filter(item => {
-			return item.querySelector('[data-hovercard-type="pull_request"]');
-		});
-		timelineItems = timelineItems.filter(item => !items.pulls.includes(item));
+			this.#items.issues = this.#getIssues(timelineItems)
+			timelineItems = timelineItems.filter((item) => ! this.#items.issues.includes(item));
 
-		items.issues = timelineItems.filter(item => {
-			return item.querySelector('[data-hovercard-type="issue"]');
-		});
-		timelineItems = timelineItems.filter(item => !items.issues.includes(item));
+			this.#items.others = timelineItems
+		}
 
-		items.deployments = timelineItems.filter(item => {
-			return item.matches('[id^="event-"]') &&
-				item.parentNode.matches('[data-url*="/events/deployed"]');
-		});
-		timelineItems = timelineItems.filter(item => !items.deployments.includes(item));
+		#getItemsByEventIdPrefix(items, prefix) {
+			return items.filter((item) => {
+				return item.dataset.timelineEventId.startsWith(prefix)
+			})
+		}
 
-		items.others = timelineItems;
-	}
+		#getPulls(items) {
+			let crossReferenceItems = this.#getItemsByEventIdPrefix(items, 'CRE_')
 
-	function filterTimeline() {
-		for (type in show) {
-			if (items.hasOwnProperty(type)) {
-				items[type].forEach(item => {
-					if (! show[type]) {
-						// console.log("Hide:", item, type);
-						item.classList.add('gtf-hidden');
-					} else {
-						// console.log("Show:", item, type);
-						item.classList.remove('gtf-hidden');
-					}
+			return crossReferenceItems.filter((item) => {
+				return item.querySelector('[data-hovercard-url*="/pull/"]')
+			})
+		}
+
+		#getIssues(items) {
+			let crossReferenceItems = this.#getItemsByEventIdPrefix(items, 'CRE_')
+
+			return crossReferenceItems.filter((item) => {
+				return item.querySelector('[data-hovercard-url*="/issues/"]')
+			})
+		}
+
+		#updateItemsCount() {
+			let totalCount = 0
+
+			this.#labelElements.forEach((label) => {
+				totalCount += this.#items[label.dataset.type].length
+				label.dataset.count = this.#items[label.dataset.type].length
+			})
+
+			this.#element?.classList.toggle('gtf--hidden', totalCount === 0);
+		}
+
+		// This is used on PRs
+		#updateLegacyTimelineItems() {
+			let timelineItems = Array.from(document.querySelectorAll('.js-timeline-item'));
+
+			this.#items.comments = this.#getLegacyComments(timelineItems)
+			timelineItems = timelineItems.filter((item) => ! this.#items.comments.includes(item));
+
+			this.#items.commits = this.#getLegacyCommits(timelineItems)
+			timelineItems = timelineItems.filter((item) => ! this.#items.commits.includes(item));
+
+			this.#items.pulls = this.#getLegacyPulls(timelineItems)
+			timelineItems = timelineItems.filter((item) => ! this.#items.pulls.includes(item));
+
+			this.#items.issues = this.#getLegacyIssues(timelineItems)
+			timelineItems = timelineItems.filter((item) => ! this.#items.issues.includes(item));
+
+			this.#items.reviews = this.#getLegacyReviews(timelineItems)
+			timelineItems = timelineItems.filter((item) => ! this.#items.reviews.includes(item));
+
+			this.#items.others = timelineItems
+		}
+
+		#getLegacyComments(items) {
+			return items.filter((item) => {
+				return item.querySelector('.js-comment-container') &&
+					!item.querySelector('[id*="pullrequestreview-"]');
+			})
+		}
+
+		#getLegacyCommits(items) {
+			return items.filter((item) => {
+				return item.querySelector('[id*="commits-pushed-"]');
+			});
+		}
+
+		#getLegacyPulls(items) {
+			return items.filter((item) => {
+				return item.querySelector('[data-hovercard-type="pull_request"]');
+			});
+		}
+
+		#getLegacyIssues(items) {
+			return items.filter((item) => {
+				return item.querySelector('[data-hovercard-type="issue"]');
+			});
+		}
+
+		#getLegacyReviews(items) {
+			return items.filter((item) => {
+				return item.querySelector('[id*="pullrequestreview-"]');
+			})
+		}
+
+		#filterTimeline() {
+			for (let type in this.#visibility) {
+				this.#items[type].forEach((item) => {
+					item.classList.toggle('gtf-hidden', ! this.#visibility[type])
 				});
 			}
 		}
-	}
 
+		#toggleItemVisibility(checkbox) {
+			this.#visibility[checkbox.dataset.type] = checkbox.checked;
+
+			this.#storage.set({ 'gtfShow': this.#visibility });
+
+			this.#filterTimeline();
+		}
+	}
 
 	if (document.readyState === 'loading') {
 		document.addEventListener("DOMContentLoaded", function(e) {
-			initExtension();
+			new GithubTimelineFilter();
 		});
 	}
 	else {
-		initExtension();
+		new GithubTimelineFilter();
 	}
 
 })(window);

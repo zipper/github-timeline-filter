@@ -1,23 +1,35 @@
 .gtf {
-    position:fixed;
-    bottom:10px;
-    left:10px;
-    z-index:1;
-    padding:10px;
-    border:1px solid #e1e4e8;
-    border-radius:6px;
-    background:#f6f8fa;
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1;
+    padding: 10px;
+    border: 1px solid var(--borderColor-default, #e1e4e8);
+    border-radius: 6px;
+    background: var(--bgColor-muted, #f6f8fa);
+    color: var(--fgColor-default, #1f2328);
+    transition: opacity 150ms ease-in-out;
+}
+
+.gtf--hidden {
+    opacity: 0;
 }
 
 .gtf__item {
-    display:flex;
-    align-items:center;
-}
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 400;
 
-.gtf__checkbox {
-    margin:0 10px 0 0;
+    &:after {
+        content: "(" attr(data-count) ")";
+        min-width: 2em;
+        margin-left: auto;
+        opacity: 0.75;
+        text-align: right;
+    }
 }
 
 .gtf-hidden {
-    display:none !important;
+    display: none !important;
 }
