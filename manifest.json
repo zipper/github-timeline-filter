@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "GithubTimelineFilter",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "GithubTimelineFilter allows to filter items in issue detail and PRs.",
 	"content_scripts": [{
 		"css": ["userstylesheet.css"],
