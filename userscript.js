@@ -152,7 +152,7 @@
 
 		// This is used on issues
 		#updateTimelineItems() {
-			let timelineItems = Array.from(document.querySelectorAll('[data-timeline-event-id]'));
+			let timelineItems = Array.from(document.querySelectorAll('[class*=LayoutHelpers-module__timelineElement]:has([data-timeline-event-id])'));
 
 			this.#items.comments = this.#getItemsByEventIdPrefix(timelineItems, 'IC_')
 			timelineItems = timelineItems.filter((item) => ! this.#items.comments.includes(item));
@@ -171,7 +171,8 @@
 
 		#getItemsByEventIdPrefix(items, prefix) {
 			return items.filter((item) => {
-				return item.dataset.timelineEventId.startsWith(prefix)
+				const dataItem = item.querySelector('[data-timeline-event-id]')
+				return dataItem.dataset.timelineEventId.startsWith(prefix)
 			})
 		}
 
