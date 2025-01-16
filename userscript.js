@@ -106,6 +106,8 @@
 
 			observer.observe(element, { childList: true, subtree: true });
 
+			this.#activeObservers.set(element, observer)
+
 			this.#legacyMode ? this.#updateLegacyTimelineItems() : this.#updateTimelineItems();
 			this.#updateItemsCount();
 			this.#filterTimeline();
@@ -115,6 +117,9 @@
 			if (this.#activeObservers.has(element)) {
 				this.#activeObservers.get(element).disconnect();
 				this.#activeObservers.delete(element);
+
+				this.#emptyTimelineItem();
+				this.#updateItemsCount();
 			}
 		}
 
@@ -148,6 +153,13 @@
 
 			this.#element = element;
 			document.body.append(element);
+		}
+
+		// Empty the timeline
+		#emptyTimelineItem() {
+			for (let key in this.#items) {
+				this.#items[key] = []
+			}
 		}
 
 		// This is used on issues
